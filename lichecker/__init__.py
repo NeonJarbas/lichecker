@@ -81,9 +81,6 @@ class DependencyChecker:
 
 class LicenseChecker(DependencyChecker):
     ALIASES = {
-        'BSD-0-Clause': "BSD0",
-        'BSD-2-Clause': "BSD2",
-        'BSD-3-Clause': "BSD3",
         'ASL 2.0': 'Apache-2.0',
         "Python Software Foundation License": "PSFL"
     }
@@ -107,9 +104,11 @@ class LicenseChecker(DependencyChecker):
             return LicenseChecker.ALIASES[li]
         if li.lower().endswith(" license"):
             li = li[:-7].strip()
+        if "bsd" in li.lower():
+            return 'BSD'
         if "apache" in li.lower():
             return 'Apache-2.0'
-        if "ZPL" in li:
+        if li.startswith("ZPL"):
             return 'ZPL'
         return LicenseChecker.ALIASES.get(li) or li
 
@@ -119,7 +118,7 @@ class LicenseChecker(DependencyChecker):
                 for p in self.transient_dependencies}
 
     def validate(self):
-        valid = ["mit", 'apache-2.0', 'unlicense', 'mpl-2.0', 'isc', 'bsd3', 'bsd2', 'bsd', 'psfl', 'zpl']
+        valid = ["mit", 'apache-2.0', 'unlicense', 'mpl-2.0', 'isc', 'bsd', 'psfl', 'zpl']
         for pkg, li in self.licenses.items():
             if pkg in self._whitelist:
                 print(f"{pkg} explicitly allowed, skipping license check")
