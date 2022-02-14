@@ -1,6 +1,4 @@
-data = {
-    "licenseListVersion": "3.16",
-    "licenses": [
+data = [
         {
             "reference": "https://spdx.org/licenses/Interbase-1.0.html",
             "isDeprecatedLicenseId": False,
@@ -6085,6 +6083,5 @@ data = {
             "isOsiApproved": True,
             "isFsfLibre": True
         }
-    ],
-    "releaseDate": "2022-02-06"
-}
+    ]
+

@@ -22,6 +22,11 @@ class BadLicense(Exception):
     """ License contains unacceptable clauses """
 
 
+class InconsistentLicense(BadLicense):
+    """License contradicts itself, it is not consistent"""
+    # unlicense - https://softwareengineering.stackexchange.com/questions/147111/what-is-wrong-with-the-unlicense
+
+
 class AmbiguousLicense(BadLicense):
     """Wording in the license can not be unambiguously interoperated, eg 'do no evil' """
     # json license

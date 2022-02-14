@@ -1,7 +1,7 @@
 import subprocess
 
 from lichecker.exception import NoDerivativesException, BadLicense, AmbiguousLicense, \
-    UnidirectionalCodeFlow, SoftwareSpecific, UnknownLicense
+    UnidirectionalCodeFlow, SoftwareSpecific, UnknownLicense, InconsistentLicense
 
 
 class DependencyChecker:
@@ -86,27 +86,44 @@ class DependencyChecker:
 class LicenseChecker(DependencyChecker):
     ALIASES = {
         'Apache': 'Apache-2.0',
+        'Apache 2.0': 'Apache-2.0',
         'ASL 2.0': 'Apache-2.0',
+        'ISC license': 'ISC'
     }
 
-    def __init__(self, pkg_name, license_overrides=None):
+    def __init__(self, pkg_name, license_overrides=None, whitelisted_packages=None,
+                 allow_nonfree=False, allow_viral=False, allow_unknown=False,
+                 allow_unlicense=False, allow_ambiguous=False):
         super().__init__(pkg_name)
         self._license_overrides = license_overrides or {}
+        self._whitelist = whitelisted_packages or []
+        self.allow_nonfree = allow_nonfree
+        self.allow_viral = allow_viral
+        self.allow_unknown = allow_unknown
+        self.allow_unlicense = allow_unlicense
+        self.allow_ambiguous = allow_ambiguous
 
     @property
     def licenses(self):
         return {p: self._license_overrides.get(p) or self.get_package_data(p).get("License")
                 for p in self.transient_dependencies}
 
-    def check(self, allow_nonfree=False, allow_viral=False,
-              allow_unknown=False, allow_ambiguous=False):
-        valid = ["MIT", 'Apache-2.0', 'Unlicense', 'MPL-2.0']
+    def validate(self):
+        valid = ["mit", 'apache-2.0', 'unlicense', 'mpl-2.0', 'isc', 'bsd3']
         for pkg, li in self.licenses.items():
+            if pkg in self._whitelist:
+                print(f"{pkg} explicitly allowed, skipping license check")
+                continue
             li = self.ALIASES.get(li) or li
-            if "gpl" in li.lower() and not allow_viral:
+            if "gpl" in li.lower() and not self.allow_viral:
                 raise UnidirectionalCodeFlow(f"{pkg} is licensed under {li} which places restrictions in larger works")
-            if not allow_nonfree and not allow_unknown:
-                if not li or li not in valid:
+            elif 'unlicense' in li.lower() and not self.allow_unlicense:
+                raise InconsistentLicense("Unlicense is not global. It doesn't make sense in some jurisdictions.\n"
+                                          "It's inconsistent. Some of the warranty terms cannot, logically, co-exist.\n"
+                                          "The license is short, clearly expressing intent, at the cost of not carefully addressing common license, copy-right and warranty issues.")
+
+            elif not self.allow_nonfree and not self.allow_unknown:
+                if not li or li.lower() not in valid:
                     raise UnknownLicense(f"{pkg} license unknown, no permissions given")
 
 
@@ -120,11 +137,30 @@ if __name__ == "__main__":
         'yt-dlp': "Unlicense",
         'pyxdg': 'GPL-2.0',
         'ptyprocess': 'ISC license',
+        'psutil': 'BSD3'
     }
+    # explicitly allow these packages that would fail otherwise
+    whitelist = [
+        'idna',  # BSD-like
+        "pyxdg"  # TODO Remove ASAP main offender found in ovos
+    ]
+    # validation flags
+    allow_nonfree = False
+    allow_viral = False
+    allow_unknown = False
+    allow_unlicense = True
+    allow_ambiguous = False
 
 
     def test(pkg_name):
-        licheck = LicenseChecker(pkg_name, license_overrides=license_overrides)
+        licheck = LicenseChecker(pkg_name,
+                                 license_overrides=license_overrides,
+                                 whitelisted_packages=whitelist,
+                                 allow_ambiguous=allow_ambiguous,
+                                 allow_unlicense=allow_unlicense,
+                                 allow_unknown=allow_unknown,
+                                 allow_viral=allow_viral,
+                                 allow_nonfree=allow_nonfree)
         print("Package", pkg_name)
         print("Version", licheck.version)
         print("License", licheck.license)
@@ -141,8 +177,8 @@ if __name__ == "__main__":
         print("Dependency Licenses")
         pprint(licheck.licenses)
 
-        licheck.check()
+        licheck.validate()
 
 
     # test("requests")
-    test("ovos-core")
+    test("ovos-workshop")
