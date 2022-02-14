@@ -48,7 +48,7 @@ class DependencyChecker:
 
     @staticmethod
     def get_package_data(pkg_name, cache=True):
-        pkg_name = pkg_name.strip()
+        pkg_name = pkg_name.strip().replace("_", "-")  # pip normalizes this internally, removes duplicate entries since packages can use either
         if cache and DependencyChecker.cache.get(pkg_name):
             return DependencyChecker.cache[pkg_name]
         try:
@@ -85,10 +85,11 @@ class DependencyChecker:
 
 class LicenseChecker(DependencyChecker):
     ALIASES = {
-        'Apache': 'Apache-2.0',
-        'Apache 2.0': 'Apache-2.0',
+        'BSD-0-Clause': "BSD0",
+        'BSD-2-Clause': "BSD2",
+        'BSD-3-Clause': "BSD3",
         'ASL 2.0': 'Apache-2.0',
-        'ISC license': 'ISC'
+        "Python Software Foundation License": "PSFL"
     }
 
     def __init__(self, pkg_name, license_overrides=None, whitelisted_packages=None,
@@ -103,18 +104,31 @@ class LicenseChecker(DependencyChecker):
         self.allow_unlicense = allow_unlicense
         self.allow_ambiguous = allow_ambiguous
 
+    @staticmethod
+    def normalize_license_name(li):
+        li = li.strip()
+        if li in LicenseChecker.ALIASES:
+            return LicenseChecker.ALIASES[li]
+        if li.lower().endswith(" license"):
+            li = li[:-7].strip()
+        if "apache" in li.lower():
+            return 'Apache-2.0'
+        if "ZPL" in li:
+            return 'ZPL'
+        return LicenseChecker.ALIASES.get(li) or li
+
     @property
     def licenses(self):
         return {p: self._license_overrides.get(p) or self.get_package_data(p).get("License")
                 for p in self.transient_dependencies}
 
     def validate(self):
-        valid = ["mit", 'apache-2.0', 'unlicense', 'mpl-2.0', 'isc', 'bsd3']
+        valid = ["mit", 'apache-2.0', 'unlicense', 'mpl-2.0', 'isc', 'bsd3', 'bsd2', 'bsd', 'psfl', 'zpl']
         for pkg, li in self.licenses.items():
             if pkg in self._whitelist:
                 print(f"{pkg} explicitly allowed, skipping license check")
                 continue
-            li = self.ALIASES.get(li) or li
+            li = self.normalize_license_name(li)
             if "gpl" in li.lower() and not self.allow_viral:
                 raise UnidirectionalCodeFlow(f"{pkg} is licensed under {li} which places restrictions in larger works")
             elif 'unlicense' in li.lower() and not self.allow_unlicense:
