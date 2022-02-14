@@ -51,15 +51,11 @@ class DependencyChecker:
         pkg_name = pkg_name.strip().replace("_", "-")  # pip normalizes this internally, removes duplicate entries since packages can use either
         if cache and DependencyChecker.cache.get(pkg_name):
             return DependencyChecker.cache[pkg_name]
-        try:
-            out = subprocess.check_output(["pip", "show", pkg_name]).decode("utf-8")
-            lines = (l.split(": ") for l in out.split("\n") if ": " in l)
-            data = {k: v for k, v in lines if v}
-            if cache and data:
-                DependencyChecker.cache[pkg_name] = data
-        except subprocess.CalledProcessError as e:
-            print(e)
-            return {}
+        out = subprocess.check_output(["pip", "show", pkg_name]).decode("utf-8")
+        lines = (l.split(": ") for l in out.split("\n") if ": " in l)
+        data = {k: v for k, v in lines if v}
+        if cache and data:
+            DependencyChecker.cache[pkg_name] = data
         return data
 
     @staticmethod
