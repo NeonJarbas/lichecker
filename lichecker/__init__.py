@@ -87,7 +87,7 @@ class LicenseChecker(DependencyChecker):
 
     def __init__(self, pkg_name, license_overrides=None, whitelisted_packages=None,
                  allow_nonfree=False, allow_viral=False, allow_unknown=False,
-                 allow_unlicense=False, allow_ambiguous=False):
+                 allow_unlicense=False, allow_ambiguous=False, allow_public_domain=True):
         super().__init__(pkg_name)
         self._license_overrides = license_overrides or {}
         self._whitelist = whitelisted_packages or []
@@ -96,6 +96,7 @@ class LicenseChecker(DependencyChecker):
         self.allow_unknown = allow_unknown
         self.allow_unlicense = allow_unlicense
         self.allow_ambiguous = allow_ambiguous
+        self.allow_public_domain = allow_public_domain
 
     @staticmethod
     def normalize_license_name(li):
@@ -108,6 +109,8 @@ class LicenseChecker(DependencyChecker):
             return 'BSD'
         if "apache" in li.lower():
             return 'Apache-2.0'
+        if "mit" in li.lower():
+            return "MIT"
         if li.startswith("ZPL"):
             return 'ZPL'
         return LicenseChecker.ALIASES.get(li) or li
@@ -130,7 +133,9 @@ class LicenseChecker(DependencyChecker):
                 raise InconsistentLicense("Unlicense is not global. It doesn't make sense in some jurisdictions.\n"
                                           "It's inconsistent. Some of the warranty terms cannot, logically, co-exist.\n"
                                           "The license is short, clearly expressing intent, at the cost of not carefully addressing common license, copy-right and warranty issues.")
-
+            elif "public domain" in li.lower():
+                if not self.allow_public_domain:
+                    raise BadLicense("Public domain dedications are not licenses")
             elif not self.allow_nonfree and not self.allow_unknown:
                 if not li or li.lower() not in valid:
                     raise UnknownLicense(f"{pkg} license unknown, no permissions given")
