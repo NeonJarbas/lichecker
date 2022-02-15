@@ -120,7 +120,7 @@ class LicenseChecker(DependencyChecker):
         if "gnu public license" in li.lower():
             return "GPL"
         if "python" in li.lower():
-            return "PSFL"
+            return "PSF"
         return LicenseChecker.ALIASES.get(li) or li
 
     @property
@@ -129,27 +129,27 @@ class LicenseChecker(DependencyChecker):
                 for p in self.transient_dependencies}
 
     def validate(self):
-        valid = ["mit", 'apache-2.0', 'unlicense', 'mpl-2.0', 'isc', 'bsd', 'psfl', 'zpl']
+        valid = ["mit", 'apache-2.0', 'unlicense', 'mpl-2.0', 'isc', 'bsd', 'psf', 'zpl']
         pkgs = [(self.pkg_name, self.license)] + \
                [(pkg, li) for pkg, li in self.licenses.items()]
         for pkg, li in pkgs:
             if pkg in self._whitelist:
                 print(f"{pkg} explicitly allowed, skipping license check")
                 continue
-            li = self.normalize_license_name(li)
-            if "lgpl" in li.lower() and not self.allow_lgpl:
+            li = self.normalize_license_name(li).lower()
+            if "lgpl" in li and not self.allow_lgpl:
                 raise PythonLinkingException(f"{pkg} is licensed under {li} which has unclear implications in the python world")
-            elif "gpl" in li.lower() and not self.allow_viral:
+            elif "gpl" in li and not self.allow_viral:
                 raise UnidirectionalCodeFlow(f"{pkg} is licensed under {li} which places restrictions in larger works")
-            elif 'unlicense' in li.lower() and not self.allow_unlicense:
+            elif 'unlicense' in li and not self.allow_unlicense:
                 raise InconsistentLicense("Unlicense is not global. It doesn't make sense in some jurisdictions.\n"
                                           "It's inconsistent. Some of the warranty terms cannot, logically, co-exist.\n"
                                           "The license is short, clearly expressing intent, at the cost of not carefully addressing common license, copy-right and warranty issues.")
-            elif "public domain" in li.lower():
+            elif "public domain" in li:
                 if not self.allow_public_domain:
                     raise BadLicense("Public domain dedications are not licenses")
             elif not self.allow_nonfree and not self.allow_unknown:
-                if not li or li.lower() not in valid:
+                if li not in valid:
                     raise UnknownLicense(f"{pkg} license unknown, no permissions given")
 
 
