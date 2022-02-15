@@ -52,7 +52,8 @@ class DependencyChecker:
         if cache and DependencyChecker.cache.get(pkg_name):
             return DependencyChecker.cache[pkg_name]
         out = subprocess.check_output(["pip", "show", pkg_name]).decode("utf-8")
-        lines = (l.split(": ") for l in out.split("\n") if ": " in l)
+        lines = [l.split(": ") for l in out.split("\n") if ": " in l]
+        lines = [l for l in lines if len(l) == 2] # TODO debug when != 2
         data = {k: v for k, v in lines if v}
         if cache and data:
             DependencyChecker.cache[pkg_name] = data
