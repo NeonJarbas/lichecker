@@ -126,8 +126,14 @@ class LicenseChecker(DependencyChecker):
         return LicenseChecker.ALIASES.get(li) or li
 
     @property
+    def license(self):
+        return self._license_overrides.get(self.pkg_name.lower()) \
+               or super().license
+
+    @property
     def licenses(self):
-        return {p.lower(): self._license_overrides.get(p.lower()) or self.get_package_data(p).get("License")
+        return {p.lower(): self._license_overrides.get(p.lower())
+                           or self.get_package_data(p).get("License")
                 for p in self.transient_dependencies}
 
     def validate(self):
