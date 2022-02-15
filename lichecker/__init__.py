@@ -82,15 +82,15 @@ class DependencyChecker:
 
 class LicenseChecker(DependencyChecker):
     ALIASES = {
-        'ASL 2.0': 'Apache-2.0',
-        "Python Software Foundation License": "PSFL"
+        'ASL 2.0': 'Apache-2.0'
     }
 
     def __init__(self, pkg_name, license_overrides=None, whitelisted_packages=None,
                  allow_nonfree=False, allow_viral=False, allow_unknown=False,
                  allow_unlicense=False, allow_lgpl=False, allow_ambiguous=False, allow_public_domain=True):
         super().__init__(pkg_name)
-        self._license_overrides = license_overrides or {}
+        license_overrides = license_overrides or {}
+        self._license_overrides = {k.lower(): v for k, v in license_overrides.items()}
         self._whitelist = whitelisted_packages or []
         self.allow_nonfree = allow_nonfree
         self.allow_viral = allow_viral
@@ -119,11 +119,13 @@ class LicenseChecker(DependencyChecker):
             return "LGPL"
         if "gnu public license" in li.lower():
             return "GPL"
+        if "python" in li.lower():
+            return "PSFL"
         return LicenseChecker.ALIASES.get(li) or li
 
     @property
     def licenses(self):
-        return {p: self._license_overrides.get(p) or self.get_package_data(p).get("License")
+        return {p.lower(): self._license_overrides.get(p.lower()) or self.get_package_data(p).get("License")
                 for p in self.transient_dependencies}
 
     def validate(self):
