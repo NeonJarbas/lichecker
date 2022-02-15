@@ -1,7 +1,7 @@
 import subprocess
 
 from lichecker.exception import NoDerivativesException, BadLicense, AmbiguousLicense, \
-    UnidirectionalCodeFlow, SoftwareSpecific, UnknownLicense, InconsistentLicense
+    UnidirectionalCodeFlow, SoftwareSpecific, UnknownLicense, InconsistentLicense, PythonLinkingException
 
 
 class DependencyChecker:
@@ -88,7 +88,7 @@ class LicenseChecker(DependencyChecker):
 
     def __init__(self, pkg_name, license_overrides=None, whitelisted_packages=None,
                  allow_nonfree=False, allow_viral=False, allow_unknown=False,
-                 allow_unlicense=False, allow_ambiguous=False, allow_public_domain=True):
+                 allow_unlicense=False, allow_lgpl=False, allow_ambiguous=False, allow_public_domain=True):
         super().__init__(pkg_name)
         self._license_overrides = license_overrides or {}
         self._whitelist = whitelisted_packages or []
@@ -96,6 +96,7 @@ class LicenseChecker(DependencyChecker):
         self.allow_viral = allow_viral
         self.allow_unknown = allow_unknown
         self.allow_unlicense = allow_unlicense
+        self.allow_lgpl = allow_lgpl
         self.allow_ambiguous = allow_ambiguous
         self.allow_public_domain = allow_public_domain
 
@@ -114,6 +115,10 @@ class LicenseChecker(DependencyChecker):
             return "MIT"
         if li.startswith("ZPL"):
             return 'ZPL'
+        if "lesser gnu public license" in li.lower():
+            return "LGPL"
+        if "gnu public license" in li.lower():
+            return "GPL"
         return LicenseChecker.ALIASES.get(li) or li
 
     @property
@@ -128,7 +133,9 @@ class LicenseChecker(DependencyChecker):
                 print(f"{pkg} explicitly allowed, skipping license check")
                 continue
             li = self.normalize_license_name(li)
-            if "gpl" in li.lower() and not self.allow_viral:
+            if "lgpl" in li.lower() and not self.allow_lgpl:
+                raise PythonLinkingException(f"{pkg} is licensed under {li} which has unclear implications in the python world")
+            elif "gpl" in li.lower() and not self.allow_viral:
                 raise UnidirectionalCodeFlow(f"{pkg} is licensed under {li} which places restrictions in larger works")
             elif 'unlicense' in li.lower() and not self.allow_unlicense:
                 raise InconsistentLicense("Unlicense is not global. It doesn't make sense in some jurisdictions.\n"
