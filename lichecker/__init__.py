@@ -128,7 +128,9 @@ class LicenseChecker(DependencyChecker):
 
     def validate(self):
         valid = ["mit", 'apache-2.0', 'unlicense', 'mpl-2.0', 'isc', 'bsd', 'psfl', 'zpl']
-        for pkg, li in self.licenses.items():
+        pkgs = [(self.pkg_name, self.license)] + \
+               [(pkg, li) for pkg, li in self.licenses.items()]
+        for pkg, li in pkgs:
             if pkg in self._whitelist:
                 print(f"{pkg} explicitly allowed, skipping license check")
                 continue
