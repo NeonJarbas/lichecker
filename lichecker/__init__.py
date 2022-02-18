@@ -171,7 +171,8 @@ if __name__ == "__main__":
         'yt-dlp': "Unlicense",
         'pyxdg': 'GPL-2.0',
         'ptyprocess': 'ISC license',
-        'psutil': 'BSD3'
+        'psutil': 'BSD3',
+        'setuptools': "MIT"
     }
     # explicitly allow these packages that would fail otherwise
     whitelist = [
